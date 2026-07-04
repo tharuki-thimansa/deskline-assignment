@@ -11,9 +11,15 @@
   threshold for it, so it would be inventing a requirement.
 - **Deadline = `created_at + sla_hours`.** A ticket resolved *after* that instant was not
   resolved within `sla_hours`, so it counts as `breached` (not `met`).
-- **`resolved_at` is the sole "resolved" signal.** Status is not used for the SLA calc.
-  Edge case: a `closed` ticket that never got a `resolved_at` and is past its deadline reads
-  as `breached`. That follows the literal rule; flagging rather than special-casing it.
+- **The SLA clock stops when a ticket leaves the active queue.** SLA is measured against an
+  "effective resolution time": `resolved_at` if set, else `updated_at` for `resolved`/`closed`
+  tickets that never recorded a `resolved_at` (a data quirk in the seed). Only still-open
+  tickets are measured against `now()`. Without this, a long-closed ticket with no `resolved_at`
+  would be compared to today's clock and look breached forever, its badge drifting over time.
+  Using `updated_at` as the close-time proxy is an assumption (there's no `closed_at` column).
+- **Assignee is independent of SLA.** An unassigned ticket can be `met`, `on_track`, or
+  `breached` — SLA depends only on timing, not on who (if anyone) owns it. Unassigned +
+  breached is legitimate (and arguably the most urgent: overdue with no owner).
 - **SLA filter is in scope.** The brief lists "the React ticket list (filter controls + the
   SLA badge)" under task 2's stack-wiring. For task 2 to touch *filter controls*, it has to
   add an SLA filter, so I added one (combinable with the status/assignee filters from task 1).

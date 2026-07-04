@@ -4,19 +4,25 @@ import * as usersRepository from '../users/users.repository';
 import * as commentsRepository from '../comments/comments.repository';
 
 // A ticket breaches its SLA if it is not resolved within `sla_hours` of being
-// created. Resolved tickets are `met` when they beat that deadline and
-// `breached` when they did not; unresolved tickets are `breached` once the
-// deadline has passed and `on_track` until then. `alias` qualifies the columns
-// for queries that join another table also carrying `created_at` (e.g. users).
+// created. The SLA clock stops when the ticket leaves the active queue, so we
+// measure against an "effective resolution time": `resolved_at` when present,
+// otherwise the last-updated time for tickets already in a terminal state
+// (some closed/resolved rows never had `resolved_at` set). Only genuinely open
+// tickets are measured against the live clock (`now()`) — without this, a
+// long-closed ticket with no `resolved_at` would keep accruing breach forever.
+// A ticket with an effective resolution is `met` if it beat the deadline and
+// `breached` otherwise; a still-open ticket is `breached` once the deadline has
+// passed and `on_track` until then. `alias` qualifies the columns for queries
+// that join another table also carrying these names (e.g. users).
 function slaStatusSql(alias = ''): string {
   const p = alias ? `${alias}.` : '';
+  const resolvedAt = `coalesce(${p}resolved_at, case when ${p}status in ('resolved', 'closed') then ${p}updated_at end)`;
+  const deadline = `${p}created_at + ${p}sla_hours * interval '1 hour'`;
   return `case
-    when ${p}resolved_at is not null then
-      case when ${p}resolved_at <= ${p}created_at + ${p}sla_hours * interval '1 hour'
-           then 'met' else 'breached' end
+    when ${resolvedAt} is not null then
+      case when ${resolvedAt} <= ${deadline} then 'met' else 'breached' end
     else
-      case when now() > ${p}created_at + ${p}sla_hours * interval '1 hour'
-           then 'breached' else 'on_track' end
+      case when now() > ${deadline} then 'breached' else 'on_track' end
   end`;
 }
 
