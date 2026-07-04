@@ -14,7 +14,7 @@ At a glance:
   combination; no filters returns the full list unchanged.
 - **SLA badge** on every row: `On track`, `Met`, `Breached`, or `—` when it can't be determined.
 - **New `GET /users`** endpoint to populate the assignee dropdown.
-- **8 new tests** (22 total) covering the filter combinations and every SLA branch.
+- **15 new tests** (22 total, up from 7) covering the filter combinations and every SLA branch.
 - Performance work (N+1, indexes) and UI polish were deliberately **kept off this PR** and parked
   on a separate branch — see [Branch layout](#branch-layout).
 
