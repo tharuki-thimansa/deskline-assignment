@@ -88,6 +88,19 @@ a {
   color: #777;
 }
 
+.sla-on_track {
+  background: #e8eef4;
+}
+
+.sla-met {
+  background: #e7f0e7;
+}
+
+.sla-breached {
+  background: #f4e0e0;
+  color: #a33;
+}
+
 .ticket-meta {
   display: grid;
   grid-template-columns: 8rem 1fr;

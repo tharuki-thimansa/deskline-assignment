@@ -6,6 +6,7 @@ export interface TicketRow {
   priority: string;
   assignee_id: number | null;
   sla_hours: number;
+  sla_status: string;
   created_at: Date;
   updated_at: Date;
   resolved_at: Date | null;
@@ -29,6 +30,7 @@ export interface TicketDto {
   assigneeId: number | null;
   assigneeName: string | null;
   slaHours: number;
+  slaStatus: string;
   commentCount: number;
   createdAt: string;
   updatedAt: string;
@@ -58,6 +60,7 @@ export function toTicketDto(
     assigneeId: row.assignee_id,
     assigneeName,
     slaHours: row.sla_hours,
+    slaStatus: row.sla_status,
     commentCount,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),

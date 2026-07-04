@@ -7,6 +7,7 @@ export const ticketIdParamsSchema = z.object({
 export const listTicketsQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'closed']).optional(),
   assigneeId: z.coerce.number().int().positive().optional(),
+  slaStatus: z.enum(['on_track', 'met', 'breached']).optional(),
 });
 
 export const createTicketSchema = z.object({

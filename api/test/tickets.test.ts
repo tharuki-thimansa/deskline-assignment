@@ -103,6 +103,71 @@ describe('GET /users', () => {
   });
 });
 
+describe('SLA status', () => {
+  it('flags an unresolved ticket past its deadline as breached, others on_track', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets' });
+
+    const tickets = res.json();
+    const printer = tickets.find((t: any) => t.subject === 'Printer on fire');
+    const slow = tickets.find((t: any) => t.subject === 'Slow reports page');
+    // Printer: 2h old, 4h SLA -> deadline still ahead. Slow reports: 2d old,
+    // 24h SLA -> deadline already passed while unresolved.
+    expect(printer.slaStatus).toBe('on_track');
+    expect(slow.slaStatus).toBe('breached');
+  });
+
+  it('marks a ticket resolved before its deadline as met', async () => {
+    await app.inject({
+      method: 'PATCH',
+      url: '/tickets/1/status',
+      payload: { status: 'resolved' },
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/tickets/1' });
+    expect(res.json().slaStatus).toBe('met');
+  });
+
+  it('marks a ticket resolved after its deadline as breached', async () => {
+    await app.inject({
+      method: 'PATCH',
+      url: '/tickets/2/status',
+      payload: { status: 'resolved' },
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/tickets/2' });
+    expect(res.json().slaStatus).toBe('breached');
+  });
+
+  it('filters by sla status', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets?slaStatus=breached' });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0].subject).toBe('Slow reports page');
+  });
+
+  it('combines sla status with other filters', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/tickets?slaStatus=on_track&status=open',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(2);
+    expect(
+      tickets.every((t: any) => t.slaStatus === 'on_track' && t.status === 'open')
+    ).toBe(true);
+  });
+
+  it('rejects an unknown sla status filter', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets?slaStatus=late' });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
 describe('GET /tickets/:id', () => {
   it('returns the ticket with its comments', async () => {
     const res = await app.inject({ method: 'GET', url: '/tickets/1' });

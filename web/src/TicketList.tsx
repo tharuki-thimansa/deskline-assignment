@@ -13,11 +13,24 @@ const STATUS_OPTIONS: Ticket['status'][] = [
   'closed',
 ];
 
+const SLA_OPTIONS: { value: Ticket['slaStatus']; label: string }[] = [
+  { value: 'on_track', label: 'On track' },
+  { value: 'met', label: 'Met' },
+  { value: 'breached', label: 'Breached' },
+];
+
+const SLA_LABELS: Record<Ticket['slaStatus'], string> = {
+  on_track: 'On track',
+  met: 'Met',
+  breached: 'Breached',
+};
+
 export function TicketList() {
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [agents, setAgents] = useState<User[]>([]);
   const [status, setStatus] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [slaStatus, setSlaStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,13 +43,14 @@ export function TicketList() {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (assigneeId) params.set('assigneeId', assigneeId);
+    if (slaStatus) params.set('slaStatus', slaStatus);
     const query = params.toString();
 
     setTickets(null);
     request<Ticket[]>(`/tickets${query ? `?${query}` : ''}`)
       .then(setTickets)
       .catch((err: Error) => setError(err.message));
-  }, [status, assigneeId]);
+  }, [status, assigneeId, slaStatus]);
 
   if (error) return <p className="error">{error}</p>;
 
@@ -68,6 +82,17 @@ export function TicketList() {
             ))}
           </select>
         </label>
+        <label>
+          SLA{' '}
+          <select value={slaStatus} onChange={(e) => setSlaStatus(e.target.value)}>
+            <option value="">All</option>
+            {SLA_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {!tickets ? (
@@ -82,6 +107,7 @@ export function TicketList() {
               <th>Status</th>
               <th>Priority</th>
               <th>Assignee</th>
+              <th>SLA</th>
               <th>Comments</th>
               <th>Created</th>
             </tr>
@@ -99,6 +125,11 @@ export function TicketList() {
                 </td>
                 <td>{ticket.priority}</td>
                 <td>{ticket.assigneeName ?? '—'}</td>
+                <td>
+                  <span className={`badge sla-${ticket.slaStatus}`}>
+                    {SLA_LABELS[ticket.slaStatus]}
+                  </span>
+                </td>
                 <td>{ticket.commentCount}</td>
                 <td>{formatDate(ticket.createdAt)}</td>
               </tr>
