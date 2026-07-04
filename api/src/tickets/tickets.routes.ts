@@ -5,13 +5,15 @@ import * as ticketsRepository from './tickets.repository';
 import * as commentsRepository from '../comments/comments.repository';
 import {
   createTicketSchema,
+  listTicketsQuerySchema,
   ticketIdParamsSchema,
   updateStatusSchema,
 } from './tickets.schema';
 
 export async function ticketRoutes(app: FastifyInstance) {
-  app.get('/tickets', async () => {
-    return ticketsRepository.listTickets();
+  app.get('/tickets', async (request) => {
+    const filters = listTicketsQuerySchema.parse(request.query);
+    return ticketsRepository.listTickets(filters);
   });
 
   app.get('/tickets/:id', async (request) => {

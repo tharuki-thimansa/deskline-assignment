@@ -28,6 +28,20 @@ a {
   color: #35516e;
 }
 
+.filters {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.filters select {
+  font-size: 0.9rem;
+  padding: 0.25rem 0.4rem;
+}
+
 .ticket-table {
   width: 100%;
   border-collapse: collapse;

@@ -42,6 +42,65 @@ describe('GET /tickets', () => {
     expect(unassigned.assigneeName).toBeNull();
     expect(unassigned.commentCount).toBe(0);
   });
+
+  it('filters by status', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets?status=open' });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(2);
+    expect(tickets.every((t: any) => t.status === 'open')).toBe(true);
+  });
+
+  it('filters by assignee', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets?assigneeId=1' });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0].subject).toBe('Printer on fire');
+  });
+
+  it('combines status and assignee filters', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/tickets?status=in_progress&assigneeId=2',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0].subject).toBe('Slow reports page');
+  });
+
+  it('returns an empty list when filters match nothing', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/tickets?status=open&assigneeId=2',
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it('rejects an unknown status filter', async () => {
+    const res = await app.inject({ method: 'GET', url: '/tickets?status=archived' });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe('GET /users', () => {
+  it('returns the agents ordered by name', async () => {
+    const res = await app.inject({ method: 'GET', url: '/users' });
+
+    expect(res.statusCode).toBe(200);
+    const users = res.json();
+    expect(users).toEqual([
+      { id: 1, name: 'Ada Fixture' },
+      { id: 2, name: 'Grace Fixture' },
+    ]);
+  });
 });
 
 describe('GET /tickets/:id', () => {

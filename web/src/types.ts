@@ -13,6 +13,11 @@ export interface Ticket {
   resolvedAt: string | null;
 }
 
+export interface User {
+  id: number;
+  name: string;
+}
+
 export interface Comment {
   id: number;
   ticketId: number;

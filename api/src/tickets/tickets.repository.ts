@@ -3,9 +3,29 @@ import { toTicketDto, type TicketDto, type TicketRow } from '../mappers';
 import * as usersRepository from '../users/users.repository';
 import * as commentsRepository from '../comments/comments.repository';
 
-export async function listTickets(): Promise<TicketDto[]> {
+export interface ListTicketsFilters {
+  status?: string;
+  assigneeId?: number;
+}
+
+export async function listTickets(
+  filters: ListTicketsFilters = {}
+): Promise<TicketDto[]> {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  if (filters.status !== undefined) {
+    params.push(filters.status);
+    conditions.push(`status = $${params.length}`);
+  }
+  if (filters.assigneeId !== undefined) {
+    params.push(filters.assigneeId);
+    conditions.push(`assignee_id = $${params.length}`);
+  }
+  const where = conditions.length ? `where ${conditions.join(' and ')}` : '';
+
   const { rows } = await pool.query<TicketRow>(
-    'select * from tickets order by created_at desc'
+    `select * from tickets ${where} order by created_at desc`,
+    params
   );
 
   const result: TicketDto[] = [];

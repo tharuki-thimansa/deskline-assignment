@@ -3,11 +3,13 @@ import { pathToFileURL } from 'node:url';
 import Fastify from 'fastify';
 import { errorHandler } from './errors';
 import { ticketRoutes } from './tickets/tickets.routes';
+import { userRoutes } from './users/users.routes';
 
 export function buildServer(opts: { logger?: boolean } = {}) {
   const app = Fastify({ logger: opts.logger ?? true });
   app.setErrorHandler(errorHandler);
   app.register(ticketRoutes);
+  app.register(userRoutes);
   return app;
 }
 

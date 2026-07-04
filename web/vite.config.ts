@@ -7,6 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/tickets': 'http://127.0.0.1:3000',
+      '/users': 'http://127.0.0.1:3000',
     },
   },
 });

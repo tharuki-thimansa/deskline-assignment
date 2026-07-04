@@ -4,6 +4,11 @@ export const ticketIdParamsSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+export const listTicketsQuerySchema = z.object({
+  status: z.enum(['open', 'in_progress', 'resolved', 'closed']).optional(),
+  assigneeId: z.coerce.number().int().positive().optional(),
+});
+
 export const createTicketSchema = z.object({
   subject: z.string().min(1).max(200),
   description: z.string().min(1),
