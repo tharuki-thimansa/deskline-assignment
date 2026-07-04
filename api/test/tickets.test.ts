@@ -183,6 +183,24 @@ describe('SLA status', () => {
     expect(t.slaStatus).toBeNull();
   });
 
+  it('filters by sla status = unknown', async () => {
+    await pool.query(`
+      insert into tickets
+        (subject, description, status, priority, assignee_id, sla_hours, created_at, updated_at, resolved_at)
+      values
+        ('Closed, no resolved_at', 'x', 'closed', 'low', null, 4,
+         now() - interval '10 days', now() - interval '9 days', null)
+    `);
+
+    const res = await app.inject({ method: 'GET', url: '/tickets?slaStatus=unknown' });
+
+    expect(res.statusCode).toBe(200);
+    const tickets = res.json();
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0].subject).toBe('Closed, no resolved_at');
+    expect(tickets[0].slaStatus).toBeNull();
+  });
+
   it('treats a reopened active ticket as live, ignoring a stale resolved_at', async () => {
     // in_progress, but carries an old resolved_at from work that was later
     // reverted. It is back in the active queue, so its SLA runs against now()

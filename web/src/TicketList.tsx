@@ -15,10 +15,13 @@ const STATUS_OPTIONS: Ticket['status'][] = [
 
 type SlaStatus = NonNullable<Ticket['slaStatus']>;
 
-const SLA_OPTIONS: { value: SlaStatus; label: string }[] = [
+// Filter values include 'unknown' (maps to tickets with no computable SLA);
+// it is not one of a ticket's own slaStatus values, so it lives here only.
+const SLA_OPTIONS: { value: SlaStatus | 'unknown'; label: string }[] = [
   { value: 'on_track', label: 'On track' },
   { value: 'met', label: 'Met' },
   { value: 'breached', label: 'Breached' },
+  { value: 'unknown', label: 'Unknown' },
 ];
 
 const SLA_LABELS: Record<SlaStatus, string> = {

@@ -50,7 +50,10 @@ export async function listTickets(
     params.push(filters.assigneeId);
     conditions.push(`assignee_id = $${params.length}`);
   }
-  if (filters.slaStatus !== undefined) {
+  if (filters.slaStatus === 'unknown') {
+    // Tickets whose SLA can't be determined (terminal, no resolved_at).
+    conditions.push('sla_status is null');
+  } else if (filters.slaStatus !== undefined) {
     params.push(filters.slaStatus);
     conditions.push(`sla_status = $${params.length}`);
   }
