@@ -4,23 +4,24 @@ import * as usersRepository from '../users/users.repository';
 import * as commentsRepository from '../comments/comments.repository';
 
 // A ticket breaches its SLA if it is not resolved within `sla_hours` of being
-// created. The SLA clock stops when the ticket leaves the active queue, so we
-// measure against an "effective resolution time": `resolved_at` when present,
-// otherwise the last-updated time for tickets already in a terminal state
-// (some closed/resolved rows never had `resolved_at` set). Only genuinely open
-// tickets are measured against the live clock (`now()`) — without this, a
-// long-closed ticket with no `resolved_at` would keep accruing breach forever.
-// A ticket with an effective resolution is `met` if it beat the deadline and
-// `breached` otherwise; a still-open ticket is `breached` once the deadline has
-// passed and `on_track` until then. `alias` qualifies the columns for queries
-// that join another table also carrying these names (e.g. users).
+// created. The SLA clock runs while a ticket is in the active queue and stops
+// once it reaches a terminal state, so status — not the mere presence of a
+// `resolved_at` — decides which clock applies:
+//   - active (open / in_progress): measured against the live clock (`now()`),
+//     ignoring any stale `resolved_at` left over from a reopened ticket;
+//   - terminal (resolved / closed): judged by when it finished — `resolved_at`,
+//     or `updated_at` as a fallback for rows that never recorded one.
+// A terminal ticket is `met` if it finished by the deadline and `breached`
+// otherwise; an active ticket is `breached` once the deadline has passed and
+// `on_track` until then. `alias` qualifies the columns for queries that join
+// another table also carrying these names (e.g. users).
 function slaStatusSql(alias = ''): string {
   const p = alias ? `${alias}.` : '';
-  const resolvedAt = `coalesce(${p}resolved_at, case when ${p}status in ('resolved', 'closed') then ${p}updated_at end)`;
   const deadline = `${p}created_at + ${p}sla_hours * interval '1 hour'`;
+  const finishedAt = `coalesce(${p}resolved_at, ${p}updated_at)`;
   return `case
-    when ${resolvedAt} is not null then
-      case when ${resolvedAt} <= ${deadline} then 'met' else 'breached' end
+    when ${p}status in ('resolved', 'closed') then
+      case when ${finishedAt} <= ${deadline} then 'met' else 'breached' end
     else
       case when now() > ${deadline} then 'breached' else 'on_track' end
   end`;

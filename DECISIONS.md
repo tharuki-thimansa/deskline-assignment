@@ -11,12 +11,17 @@
   threshold for it, so it would be inventing a requirement.
 - **Deadline = `created_at + sla_hours`.** A ticket resolved *after* that instant was not
   resolved within `sla_hours`, so it counts as `breached` (not `met`).
-- **The SLA clock stops when a ticket leaves the active queue.** SLA is measured against an
-  "effective resolution time": `resolved_at` if set, else `updated_at` for `resolved`/`closed`
-  tickets that never recorded a `resolved_at` (a data quirk in the seed). Only still-open
-  tickets are measured against `now()`. Without this, a long-closed ticket with no `resolved_at`
-  would be compared to today's clock and look breached forever, its badge drifting over time.
-  Using `updated_at` as the close-time proxy is an assumption (there's no `closed_at` column).
+- **The SLA clock runs by status, not by `resolved_at`.** A ticket's clock runs while it's in
+  the active queue and stops when it reaches a terminal state, so **status** decides the calc:
+  - active (`open` / `in_progress`) → measured against `now()`, ignoring any stale `resolved_at`
+    (the seed has reopened tickets that still carry an old one — e.g. "Audit log missing user
+    agent info" is `in_progress` but has a `resolved_at` from a shipped-then-reverted fix; it
+    must read `breached`, not `met`);
+  - terminal (`resolved` / `closed`) → judged by when it finished: `resolved_at`, or `updated_at`
+    as a fallback for rows that never recorded one (also a seed quirk).
+  Keying off `resolved_at` presence alone got both edges wrong (a long-closed ticket looked
+  breached against an ever-advancing clock; a reopened ticket looked met off a stale timestamp).
+  Using `updated_at` as the finish-time proxy is an assumption — there's no `closed_at` column.
 - **Assignee is independent of SLA.** An unassigned ticket can be `met`, `on_track`, or
   `breached` — SLA depends only on timing, not on who (if anyone) owns it. Unassigned +
   breached is legitimate (and arguably the most urgent: overdue with no owner).

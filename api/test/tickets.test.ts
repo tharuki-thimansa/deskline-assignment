@@ -187,6 +187,23 @@ describe('SLA status', () => {
     expect(within.slaStatus).toBe('met');
     expect(after.slaStatus).toBe('breached');
   });
+
+  it('treats a reopened active ticket as live, ignoring a stale resolved_at', async () => {
+    // in_progress, but carries an old resolved_at from work that was later
+    // reverted. It is back in the active queue, so its SLA runs against now()
+    // (overdue -> breached), not "met" off the stale timestamp.
+    await pool.query(`
+      insert into tickets
+        (subject, description, status, priority, assignee_id, sla_hours, created_at, updated_at, resolved_at)
+      values
+        ('Reopened, stale resolved_at', 'z', 'in_progress', 'low', null, 24,
+         now() - interval '10 days', now() - interval '1 day', now() - interval '9 days')
+    `);
+
+    const tickets = (await app.inject({ method: 'GET', url: '/tickets' })).json();
+    const t = tickets.find((x: any) => x.subject === 'Reopened, stale resolved_at');
+    expect(t.slaStatus).toBe('breached');
+  });
 });
 
 describe('GET /tickets/:id', () => {
