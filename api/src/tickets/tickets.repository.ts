@@ -8,20 +8,24 @@ import * as commentsRepository from '../comments/comments.repository';
 // once it reaches a terminal state, so status — not the mere presence of a
 // `resolved_at` — decides which clock applies:
 //   - active (open / in_progress): measured against the live clock (`now()`),
-//     ignoring any stale `resolved_at` left over from a reopened ticket;
-//   - terminal (resolved / closed): judged by when it finished — `resolved_at`,
-//     or `updated_at` as a fallback for rows that never recorded one.
-// A terminal ticket is `met` if it finished by the deadline and `breached`
-// otherwise; an active ticket is `breached` once the deadline has passed and
-// `on_track` until then. `alias` qualifies the columns for queries that join
-// another table also carrying these names (e.g. users).
+//     ignoring any stale `resolved_at` left over from a reopened ticket. It is
+//     `breached` once the deadline has passed and `on_track` until then.
+//   - terminal (resolved / closed): judged by `resolved_at` — `met` if it beat
+//     the deadline, else `breached`. If a terminal ticket never recorded a
+//     `resolved_at`, we genuinely can't tell when it finished, so the status is
+//     `null` (unknown) rather than a guess from another timestamp.
+// `alias` qualifies the columns for queries that join another table also
+// carrying these names (e.g. users).
 function slaStatusSql(alias = ''): string {
   const p = alias ? `${alias}.` : '';
   const deadline = `${p}created_at + ${p}sla_hours * interval '1 hour'`;
-  const finishedAt = `coalesce(${p}resolved_at, ${p}updated_at)`;
   return `case
     when ${p}status in ('resolved', 'closed') then
-      case when ${finishedAt} <= ${deadline} then 'met' else 'breached' end
+      case
+        when ${p}resolved_at is null then null
+        when ${p}resolved_at <= ${deadline} then 'met'
+        else 'breached'
+      end
     else
       case when now() > ${deadline} then 'breached' else 'on_track' end
   end`;

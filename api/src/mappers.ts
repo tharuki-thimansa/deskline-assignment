@@ -6,7 +6,7 @@ export interface TicketRow {
   priority: string;
   assignee_id: number | null;
   sla_hours: number;
-  sla_status: string;
+  sla_status: string | null;
   created_at: Date;
   updated_at: Date;
   resolved_at: Date | null;
@@ -30,7 +30,7 @@ export interface TicketDto {
   assigneeId: number | null;
   assigneeName: string | null;
   slaHours: number;
-  slaStatus: string;
+  slaStatus: string | null;
   commentCount: number;
   createdAt: string;
   updatedAt: string;

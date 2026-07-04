@@ -17,11 +17,14 @@
     (the seed has reopened tickets that still carry an old one — e.g. "Audit log missing user
     agent info" is `in_progress` but has a `resolved_at` from a shipped-then-reverted fix; it
     must read `breached`, not `met`);
-  - terminal (`resolved` / `closed`) → judged by when it finished: `resolved_at`, or `updated_at`
-    as a fallback for rows that never recorded one (also a seed quirk).
-  Keying off `resolved_at` presence alone got both edges wrong (a long-closed ticket looked
-  breached against an ever-advancing clock; a reopened ticket looked met off a stale timestamp).
-  Using `updated_at` as the finish-time proxy is an assumption — there's no `closed_at` column.
+  - terminal (`resolved` / `closed`) → judged by `resolved_at`: `met` if it beat the deadline,
+    else `breached`.
+- **Terminal tickets with no `resolved_at` → `slaStatus: null` (unknown), rendered as `—`.**
+  A couple of seed rows are `closed` but never recorded a `resolved_at`. We can't know when they
+  actually finished, so rather than assert a verdict from a proxy like `updated_at` (which risks
+  labelling a ticket "breached" when it may have been fine), we return `null` and show a blank
+  badge. Honest "unknown" over a confident guess — an agent can then tell a real breach from a
+  data gap at a glance. (Earlier I tried the `updated_at` fallback; dropped it for this reason.)
 - **Assignee is independent of SLA.** An unassigned ticket can be `met`, `on_track`, or
   `breached` — SLA depends only on timing, not on who (if anyone) owns it. Unassigned +
   breached is legitimate (and arguably the most urgent: overdue with no owner).

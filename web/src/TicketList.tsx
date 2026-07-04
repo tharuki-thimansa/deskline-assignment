@@ -13,13 +13,15 @@ const STATUS_OPTIONS: Ticket['status'][] = [
   'closed',
 ];
 
-const SLA_OPTIONS: { value: Ticket['slaStatus']; label: string }[] = [
+type SlaStatus = NonNullable<Ticket['slaStatus']>;
+
+const SLA_OPTIONS: { value: SlaStatus; label: string }[] = [
   { value: 'on_track', label: 'On track' },
   { value: 'met', label: 'Met' },
   { value: 'breached', label: 'Breached' },
 ];
 
-const SLA_LABELS: Record<Ticket['slaStatus'], string> = {
+const SLA_LABELS: Record<SlaStatus, string> = {
   on_track: 'On track',
   met: 'Met',
   breached: 'Breached',
@@ -126,9 +128,13 @@ export function TicketList() {
                 <td>{ticket.priority}</td>
                 <td>{ticket.assigneeName ?? '—'}</td>
                 <td>
-                  <span className={`badge sla-${ticket.slaStatus}`}>
-                    {SLA_LABELS[ticket.slaStatus]}
-                  </span>
+                  {ticket.slaStatus ? (
+                    <span className={`badge sla-${ticket.slaStatus}`}>
+                      {SLA_LABELS[ticket.slaStatus]}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td>{ticket.commentCount}</td>
                 <td>{formatDate(ticket.createdAt)}</td>

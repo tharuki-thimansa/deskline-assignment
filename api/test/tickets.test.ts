@@ -167,25 +167,20 @@ describe('SLA status', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('measures terminal tickets with no resolved_at by their close time, not now()', async () => {
-    // Two closed tickets that never recorded resolved_at. Their SLA must be
-    // judged by when they were closed (updated_at), otherwise the live clock
-    // keeps running and every long-closed ticket looks breached forever.
+  it('returns null (unknown) for terminal tickets that never recorded a resolved_at', async () => {
+    // A closed ticket with no resolved_at: we can't know when it actually
+    // finished, so we don't guess met/breached from another timestamp.
     await pool.query(`
       insert into tickets
         (subject, description, status, priority, assignee_id, sla_hours, created_at, updated_at, resolved_at)
       values
-        ('Closed within SLA, no resolved_at', 'x', 'closed', 'low', null, 24,
-         now() - interval '10 days', now() - interval '10 days' + interval '2 hours', null),
-        ('Closed after SLA, no resolved_at', 'y', 'closed', 'low', null, 4,
+        ('Closed, no resolved_at', 'x', 'closed', 'low', null, 4,
          now() - interval '10 days', now() - interval '9 days', null)
     `);
 
     const tickets = (await app.inject({ method: 'GET', url: '/tickets' })).json();
-    const within = tickets.find((t: any) => t.subject === 'Closed within SLA, no resolved_at');
-    const after = tickets.find((t: any) => t.subject === 'Closed after SLA, no resolved_at');
-    expect(within.slaStatus).toBe('met');
-    expect(after.slaStatus).toBe('breached');
+    const t = tickets.find((x: any) => x.subject === 'Closed, no resolved_at');
+    expect(t.slaStatus).toBeNull();
   });
 
   it('treats a reopened active ticket as live, ignoring a stale resolved_at', async () => {
