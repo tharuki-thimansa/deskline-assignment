@@ -52,16 +52,27 @@
 ## Anything I noticed in the existing code
 
 - **N+1 in `listTickets`** ([api/src/tickets/tickets.repository.ts](api/src/tickets/tickets.repository.ts)):
-  it loops per row calling `findNameById` + `countForTicket`, while `getTicketById` does the
-  same work in a single join. I left it as-is to keep this PR scoped, but it's the first thing
-  I'd fold into one query (see below). Flagging rather than silently rewriting.
-- **`updateStatus` never bumps `updated_at`** — a status change leaves `updated_at` stale.
-  Minor, not touched.
+  it loops per row calling `findNameById` + `countForTicket` (2N+1 queries), while
+  `getTicketById` already does the same work in one join. I deliberately kept it out of this
+  PR to stay scoped, but I did prototype the fix (one query via a `LEFT JOIN` + comment-count
+  subquery) plus supporting indexes on the `perf/list-query-and-indexes` branch — behaviour
+  identical, tests still green. Flagging + prototyping rather than silently expanding this PR.
+- **No indexes for the list's access paths** — it sorts by `created_at` and filters by
+  `status` / `assignee_id`, with no indexes on those columns. Same branch adds them; left out
+  of this PR for the same scope reason.
+- **`updateStatus` never bumps `updated_at`, and never clears `resolved_at` on reopen** — a
+  status change leaves `updated_at` stale, and a ticket moved back to `open` keeps its old
+  `resolved_at`, so it would still read as resolved for SLA. Minor, flagged not touched.
 
 ## What I'd do with more time
 
-- Collapse `listTickets` into a single query (join + comment-count subquery + `sla_status`),
-  removing the N+1 and unifying it with `getTicketById`.
+- **Pagination on `/tickets`** — the real scaling limit: it returns every row in one response,
+  which hurts payload + DOM size well before the query count does. Keyset pagination
+  (`where created_at < $cursor limit N`) pairs naturally with a `created_at` index. Not done
+  here because it changes the API response shape and the front end — bigger than this task
+  warrants.
+- **Merge the `perf/list-query-and-indexes` branch** — the N+1 fix and indexes above, kept
+  separate so this PR stays feature-only and reviewable.
 - Show the SLA badge on the ticket **detail** page too (the data is already there).
 - A small front-end test for the badge/filter wiring (the repo currently has no web tests, so
   I stayed with the existing API-only test setup).
